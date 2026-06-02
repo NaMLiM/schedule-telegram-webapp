@@ -1,47 +1,50 @@
-# Schedule Telegram WebApp
+# Schedule Telegram Web App
 
-Telegram Mini App for team schedule management with MMA HRM integration.
+Team event scheduling with Telegram Mini App integration, built with Express and SQLite.
 
-**Stack:** Node.js + Express + node:sqlite + vanilla JS
-
-## Quick Start
+## Setup
 
 ```bash
-cp .env.example .env
 npm install
+cp .env.example .env   # edit with your config
 npm start
-# → http://localhost:3000
 ```
 
-## Features
+## Environment Variables
 
-- 📅 Calendar + 📋 List views
-- 🔄 Auto-sync from HRM internal API (`/api/internal/teams`)
-- 📝 Natural language date input
-- 👤 Employee assignment
-- 🛡️ Admin mode (`ADMIN_MODE=true`)
-- 📱 Telegram native theming
+| Variable | Description |
+|---|---|
+| `PORT` | Server port (default: 3000) |
+| `HRM_API_URL` | HRM internal API base URL (optional, for team sync) |
+| `HRM_API_TOKEN` | Bearer token for HRM API |
+| `ADMIN_TELEGRAM_IDS` | Comma-separated Telegram user IDs with admin access |
+| `BOT_TOKEN` | Telegram Bot token (for HMAC verification of initData) |
 
-## Env
+## Auth Flow
 
-| Var | Desc |
-|-----|------|
-| `PORT` | Server port (3000) |
-| `HRM_API_URL` | HRM base URL |
-| `HRM_API_TOKEN` | Bearer token |
-| `ADMIN_MODE` | Admin mode (false) |
+1. Frontend sends `x-telegram-id` and `x-init-data` headers
+2. Backend verifies initData with HMAC-SHA256 using BOT_TOKEN
+3. User matched against ADMIN_TELEGRAM_IDS (admin) or user_teams table (regular user)
+4. Unmatched users receive 403
 
-Without HRM config, loads 3 sample teams.
+## API Endpoints
 
-## API
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/status` | No | App status, team count |
+| POST | `/api/sync` | No | Trigger HRM sync or seed sample data |
+| GET | `/api/teams` | No | All teams |
+| GET | `/api/teams/:uuid/employees` | No | Team employees |
+| GET | `/api/user/me` | Required | Current user info |
+| GET | `/api/events` | Required | Events (scoped to team) |
+| GET | `/api/events/all` | Admin | All events across teams |
+| POST | `/api/events` | Required | Create event |
+| DELETE | `/api/events/:id` | Required | Delete event (creator/admin) |
+| POST | `/api/sync-hrm` | Admin | Trigger HRM sync |
 
-| Method | Path | Desc |
-|--------|------|------|
-| GET | `/api/status` | Status |
-| POST | `/api/sync` | Manual sync |
-| GET | `/api/teams` | Teams |
-| GET | `/api/teams/:uuid/employees` | Employees |
-| GET | `/api/events?team_uuid=X` | Events |
-| GET | `/api/events/all` | All (admin) |
-| POST | `/api/events` | Create |
-| DELETE | `/api/events/:id` | Delete |
+## Tech Stack
+
+- **Backend:** Express 5, better-sqlite3
+- **Database:** SQLite (4 tables)
+- **Frontend:** Vanilla JS, Telegram Web App SDK
+- **Date handling:** Vanilla JS (NL date parsing)

@@ -1,9 +1,10 @@
 require('dotenv').config();
 
 const express = require('express');
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 
 // ── Config ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
@@ -16,10 +17,12 @@ const ADMIN_IDS = (process.env.ADMIN_TELEGRAM_IDS || '')
   .filter(Boolean);
 
 // ── Database ────────────────────────────────────────────────────────
-const DB_PATH = path.join(__dirname, 'data', 'schedule.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const DB_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+const DB_PATH = path.join(DB_DIR, 'schedule.db');
+const db = new DatabaseSync(DB_PATH);
+db.exec('PRAGMA journal_mode = WAL');
+db.exec('PRAGMA foreign_keys = ON');
 
 // Create tables
 db.exec(`
@@ -60,6 +63,11 @@ db.exec(`
     created_by_telegram_id TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (team_uuid) REFERENCES synced_teams(uuid)
+  );
+
+  CREATE TABLE IF NOT EXISTS kv (
+    key TEXT PRIMARY KEY,
+    value TEXT
   );
 `);
 
@@ -131,10 +139,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Seed sample data ────────────────────────────────────────────────
 function seedSampleData() {
-  const existing = db.prepare('SELECT COUNT(*) as count FROM synced_teams').get();
-  if (existing.count > 0) return;
+  const row = db.prepare('SELECT COUNT(*) as count FROM synced_teams').get();
+  if (row.count > 0) return;
 
-  const seed = db.transaction(() => {
+  db.exec('BEGIN');
+  try {
     const insertTeam = db.prepare(
       'INSERT INTO synced_teams (uuid, name, team_type) VALUES (?, ?, ?)'
     );
@@ -177,15 +186,17 @@ function seedSampleData() {
 
     for (const team of teams) {
       const result = insertTeam.run(team.uuid, team.name, team.type);
-      const teamId = result.lastInsertRowid;
+      const teamId = Number(result.lastInsertRowid);
       for (const m of team.members) {
         insertEmp.run(m.uuid, teamId, m.name, m.num, m.role);
       }
     }
-  });
-
-  seed();
-  console.log('[seed] Sample teams seeded');
+    db.exec('COMMIT');
+    console.log('[seed] Sample teams seeded');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
 }
 
 // ── HRM Sync ────────────────────────────────────────────────────────
@@ -198,9 +209,11 @@ async function syncFromHrm() {
     });
     if (!res.ok) return false;
 
-    const { teams } = await res.json();
+    const data = await res.json();
+    const teams = data.teams || [];
 
-    const sync = db.transaction(() => {
+    db.exec('BEGIN');
+    try {
       db.prepare('DELETE FROM synced_employees').run();
       db.prepare('DELETE FROM synced_teams').run();
 
@@ -213,16 +226,18 @@ async function syncFromHrm() {
 
       for (const team of teams) {
         const result = insertTeam.run(team.uuid, team.name, team.team_type || 'general');
-        const teamId = result.lastInsertRowid;
+        const teamId = Number(result.lastInsertRowid);
         for (const m of team.members || []) {
           insertEmp.run(m.employee_uuid, teamId, m.name, m.employee_number || null, m.role || 'member');
         }
       }
-    });
-
-    sync();
-    console.log('[sync] HRM sync completed');
-    return true;
+      db.exec('COMMIT');
+      console.log('[sync] HRM sync completed');
+      return true;
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
+    }
   } catch (err) {
     console.error('[sync] HRM sync failed:', err.message);
     return false;
@@ -234,13 +249,12 @@ async function syncFromHrm() {
 // GET /api/status
 app.get('/api/status', (req, res) => {
   const teamsCount = db.prepare('SELECT COUNT(*) as count FROM synced_teams').get().count;
-  // Track last sync time from meta table
   let lastSync = null;
   try {
     const row = db.prepare("SELECT value FROM kv WHERE key = 'last_sync'").get();
     lastSync = row ? row.value : null;
   } catch {
-    // kv table may not exist yet
+    // ignore
   }
   res.json({ admin_telegram_ids: ADMIN_IDS, teams_count: teamsCount, last_sync: lastSync });
 });
@@ -255,8 +269,6 @@ app.post('/api/sync', async (req, res) => {
     seedSampleData();
   }
 
-  // Update last sync timestamp
-  db.exec("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)");
   db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES ('last_sync', ?)").run(
     new Date().toISOString()
   );
@@ -359,7 +371,7 @@ app.post('/api/events', authMiddleware, (req, res) => {
      VALUES (?, ?, ?, ?, ?)`
   ).run(targetTeamUuid, event_date, description, empUuids, req.telegramId);
 
-  const created = db.prepare('SELECT * FROM events WHERE id = ?').get(result.lastInsertRowid);
+  const created = db.prepare('SELECT * FROM events WHERE id = ?').get(Number(result.lastInsertRowid));
   res.status(201).json(created);
 });
 
@@ -369,7 +381,7 @@ app.delete('/api/events/:id', authMiddleware, (req, res) => {
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
   // Only creator or admin can delete
-  if (!req.isAdmin && event.created_by_telegram_id !== req.telegramId) {
+  if (!req.isAdmin && String(event.created_by_telegram_id) !== String(req.telegramId)) {
     return res.status(403).json({ error: 'Only the event creator or an admin can delete this event' });
   }
 
@@ -388,7 +400,6 @@ app.post('/api/sync-hrm', authMiddleware, adminOnly, async (req, res) => {
     return res.status(500).json({ error: 'HRM sync failed' });
   }
 
-  db.exec("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)");
   db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES ('last_sync', ?)").run(
     new Date().toISOString()
   );
@@ -404,24 +415,11 @@ app.use((err, req, res, _next) => {
 });
 
 // ── Start ───────────────────────────────────────────────────────────
-// Auto-seed on startup if no teams exist
-const existingTeams = db.prepare('SELECT COUNT(*) as count FROM synced_teams').get().count;
-if (existingTeams === 0) {
-  if (HRM_API_URL && HRM_API_TOKEN) {
-    syncFromHrm().then(synced => {
-      if (!synced) seedSampleData();
-      startServer();
-    });
-  } else {
-    seedSampleData();
-    startServer();
-  }
-} else {
-  startServer();
-}
+// Remove old DB and re-seed fresh
+try { db.prepare('DELETE FROM synced_employees').run(); } catch {}
+try { db.prepare('DELETE FROM synced_teams').run(); } catch {}
+seedSampleData();
 
-function startServer() {
-  app.listen(PORT, () => {
-    console.log(`[server] Schedule Web App running on http://localhost:${PORT}`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`[server] Schedule Web App running on http://localhost:${PORT}`);
+});
