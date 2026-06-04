@@ -246,6 +246,8 @@ async function syncFromHrm() {
         'INSERT OR REPLACE INTO user_teams (telegram_id, team_uuid, display_name) VALUES (?, ?, ?)'
       );
 
+      const activeTelegramIds = new Set();
+
       for (const team of teams) {
         const result = insertTeam.run(team.uuid, team.name, team.team_type || 'general');
         const teamId = Number(result.lastInsertRowid);
@@ -254,9 +256,17 @@ async function syncFromHrm() {
           // Auto-register employees with telegram_id into the app
           if (m.telegram_id) {
             upsertUser.run(String(m.telegram_id), team.uuid, m.name);
+            activeTelegramIds.add(String(m.telegram_id));
           }
         }
       }
+
+      // Remove user_teams entries for employees no longer in any synced team
+      if (activeTelegramIds.size > 0) {
+        const placeholders = [...activeTelegramIds].map(() => '?').join(',');
+        db.prepare(`DELETE FROM user_teams WHERE telegram_id NOT IN (${placeholders})`).run(...activeTelegramIds);
+      }
+
       db.exec('COMMIT');
       console.log('[sync] HRM sync completed');
       return true;
