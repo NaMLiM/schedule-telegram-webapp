@@ -105,6 +105,13 @@ export default function App() {
         toast.success(`Synced — ${data.teams_count} teams loaded`)
         const teamData = await api<{ teams: Team[] }>('/api/teams')
         if (teamData) setTeams(teamData.teams)
+        // Also reload employees for current team
+        if (currentTeamUuid && currentTeamUuid !== '__all__') {
+          const empData = await api<{ employees: Employee[] }>(
+            `/api/teams/${encodeURIComponent(currentTeamUuid)}/employees`
+          )
+          if (empData) setEmployees(empData.employees)
+        }
         await fetchEvents()
       }
     } catch {
