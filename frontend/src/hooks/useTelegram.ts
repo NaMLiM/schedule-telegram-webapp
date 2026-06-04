@@ -45,13 +45,8 @@ export function useTelegram() {
       if (val) root.style.setProperty(key, val)
     }
 
-    const sa = tg.SafeAreaInset
-    if (sa) {
-      root.style.setProperty('--safe-area-top', sa.top + 'px')
-      root.style.setProperty('--safe-area-bottom', sa.bottom + 'px')
-      root.style.setProperty('--safe-area-left', sa.left + 'px')
-      root.style.setProperty('--safe-area-right', sa.right + 'px')
-    }
+    // TG SDK sets --tg-safe-area-inset-* CSS variables natively.
+    // CSS already maps those via var() chain — no JS needed.
   }, [])
 
   useEffect(() => {
