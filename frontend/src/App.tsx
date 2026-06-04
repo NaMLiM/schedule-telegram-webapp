@@ -26,7 +26,7 @@ export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [currentTeamUuid, setCurrentTeamUuid] = useState('')
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
-  const [selectedDates, setSelectedDates] = useState<string[]>([dayKey(new Date())])
+  const [selectedDate, setSelectedDate] = useState<string>(dayKey(new Date()))
   const [showAddModal, setShowAddModal] = useState(false)
 
   const isAdmin = userInfo?.is_admin ?? false
@@ -219,8 +219,8 @@ export default function App() {
             currentUserId={userId}
             isAdmin={isAdmin}
             onDelete={handleDeleteEvent}
-            selectedDates={selectedDates}
-            onDateSelect={(d) => setSelectedDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
           />
         ) : (
           <ListView
@@ -234,7 +234,7 @@ export default function App() {
       </main>
       <AddEventModal
         open={showAddModal}
-        prefillDates={selectedDates}
+        prefillDate={selectedDate}
         teamUuid={isAdmin ? currentTeamUuid : userInfo?.team?.uuid}
         employees={employees}
         onConfirm={handleAddEvent}

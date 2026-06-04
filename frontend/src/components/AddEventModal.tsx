@@ -16,7 +16,7 @@ import type { Employee } from '@/types'
 
 interface AddEventModalProps {
   open: boolean
-  prefillDates: string[]
+  prefillDate: string
   teamUuid: string | undefined
   employees: Employee[]
   onConfirm: (dates: string[], description: string, empUuids: string[]) => void
@@ -25,7 +25,7 @@ interface AddEventModalProps {
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
-export function AddEventModal({ open, prefillDates, employees, onConfirm, onClose }: AddEventModalProps) {
+export function AddEventModal({ open, prefillDate, employees, onConfirm, onClose }: AddEventModalProps) {
   const [text, setText] = useState('')
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('none')
   const [specificDays, setSpecificDays] = useState<number[]>([1, 2, 3, 4, 5])
@@ -46,9 +46,9 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
 
   // When a date is pre-filled from the calendar, use it directly.
   // Otherwise fall back to text-based date parsing.
-  const hasPrefill = prefillDates.length > 0
+  const hasPrefill = true
   const parsed = hasPrefill
-    ? { dates: [...prefillDates], description: text.trim() }
+    ? { dates: [prefillDate], description: text.trim() }
     : parseEventText(text)
 
   const hasValidInput = hasPrefill
@@ -111,10 +111,7 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
             <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 text-sm font-medium text-primary">
               <Calendar className="size-4 shrink-0" />
               <span>
-                {prefillDates.length === 1
-                  ? formatDateLong(prefillDates[0])
-                  : `${formatDate(prefillDates[0])} — ${formatDate(prefillDates[prefillDates.length - 1])} (${prefillDates.length} days)`
-                }
+                {formatDateLong(prefillDate)}
               </span>
             </div>
           )}
