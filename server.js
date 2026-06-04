@@ -41,6 +41,7 @@ db.exec(`
     team_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     employee_number TEXT,
+    telegram_id TEXT,
     role TEXT DEFAULT 'member',
     synced_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (team_id) REFERENCES synced_teams(id)
@@ -71,13 +72,15 @@ db.exec(`
   );
 `);
 
-// Migration: add series_id to events if missing
+// Migrations
 try {
   db.exec('ALTER TABLE events ADD COLUMN series_id TEXT');
-  console.log('[migration] Added series_id column to events');
-} catch {
-  // Already exists — ignore
-}
+  console.log('[migration] series_id → events');
+} catch { /* exists */ }
+try {
+  db.exec('ALTER TABLE synced_employees ADD COLUMN telegram_id TEXT');
+  console.log('[migration] telegram_id → synced_employees');
+} catch { /* exists */ }
 
 // ── HMAC verification ───────────────────────────────────────────────
 function verifyTelegramInitData(initData, botToken) {
@@ -156,7 +159,7 @@ function seedSampleData() {
       'INSERT INTO synced_teams (uuid, name, team_type) VALUES (?, ?, ?)'
     );
     const insertEmp = db.prepare(
-      'INSERT INTO synced_employees (employee_uuid, team_id, name, employee_number, role) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO synced_employees (employee_uuid, team_id, name, employee_number, telegram_id, role) VALUES (?, ?, ?, ?, ?, ?)'
     );
 
     const teams = [
@@ -196,7 +199,7 @@ function seedSampleData() {
       const result = insertTeam.run(team.uuid, team.name, team.type);
       const teamId = Number(result.lastInsertRowid);
       for (const m of team.members) {
-        insertEmp.run(m.uuid, teamId, m.name, m.num, m.role);
+        insertEmp.run(m.uuid, teamId, m.name, m.num, m.telegram_id || null, m.role);
       }
     }
     db.exec('COMMIT');
@@ -229,14 +232,21 @@ async function syncFromHrm() {
         'INSERT INTO synced_teams (uuid, name, team_type) VALUES (?, ?, ?)'
       );
       const insertEmp = db.prepare(
-        'INSERT INTO synced_employees (employee_uuid, team_id, name, employee_number, role) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO synced_employees (employee_uuid, team_id, name, employee_number, telegram_id, role) VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      const upsertUser = db.prepare(
+        'INSERT OR REPLACE INTO user_teams (telegram_id, team_uuid, display_name) VALUES (?, ?, ?)'
       );
 
       for (const team of teams) {
         const result = insertTeam.run(team.uuid, team.name, team.team_type || 'general');
         const teamId = Number(result.lastInsertRowid);
         for (const m of team.members || []) {
-          insertEmp.run(m.employee_uuid, teamId, m.name, m.employee_number || null, m.role || 'member');
+          insertEmp.run(m.employee_uuid, teamId, m.name, m.employee_number || null, m.telegram_id || null, m.role || 'member');
+          // Auto-register employees with telegram_id into the app
+          if (m.telegram_id) {
+            upsertUser.run(String(m.telegram_id), team.uuid, m.name);
+          }
         }
       }
       db.exec('COMMIT');
@@ -303,7 +313,7 @@ app.get('/api/teams/:uuid/employees', (req, res) => {
   if (!team) return res.status(404).json({ error: 'Team not found' });
 
   const employees = db.prepare(
-    'SELECT id, employee_uuid, name, employee_number, role FROM synced_employees WHERE team_id = ? ORDER BY name'
+    'SELECT id, employee_uuid, name, employee_number, telegram_id, role FROM synced_employees WHERE team_id = ? ORDER BY name'
   ).all(team.id);
   res.json({ employees });
 });
@@ -311,7 +321,7 @@ app.get('/api/teams/:uuid/employees', (req, res) => {
 // GET /api/employees — all employees across all teams (for UUID→name resolution)
 app.get('/api/employees', (req, res) => {
   const employees = db.prepare(
-    'SELECT id, employee_uuid, name, employee_number, role FROM synced_employees ORDER BY team_id, name'
+    'SELECT id, employee_uuid, name, employee_number, telegram_id, role FROM synced_employees ORDER BY team_id, name'
   ).all();
   res.json({ employees });
 });
