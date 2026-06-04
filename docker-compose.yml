@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/namlim/schedule-telegram-webapp:latest
     container_name: schedule-telegram-webapp
     ports:
       - "127.0.0.1:3000:3000"
