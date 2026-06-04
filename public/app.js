@@ -545,9 +545,18 @@ function updateHeaderTeam(name, uuid) {
 
 // ── Theme ───────────────────────────────────────────────────────────
 function applyTelegramTheme() {
-  const tp = window.Telegram?.WebApp?.themeParams;
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return;
+
+  const tp = tg.themeParams;
   if (!tp) return;
 
+  const root = document.documentElement;
+
+  // Apply Telegram color scheme class
+  root.classList.toggle('tg-dark', tg.colorScheme === 'dark');
+
+  // Map theme params to CSS variables
   const map = {
     '--tg-theme-bg-color': tp.bg_color,
     '--tg-theme-text-color': tp.text_color,
@@ -565,10 +574,22 @@ function applyTelegramTheme() {
     '--tg-theme-destructive-text-color': tp.destructive_text_color,
   };
 
-  const root = document.documentElement;
   for (const [key, val] of Object.entries(map)) {
     if (val) root.style.setProperty(key, val);
   }
+
+  // Apply safe area insets from Telegram SDK
+  const sa = tg.SafeAreaInset;
+  if (sa) {
+    root.style.setProperty('--safe-area-top', sa.top + 'px');
+    root.style.setProperty('--safe-area-bottom', sa.bottom + 'px');
+    root.style.setProperty('--safe-area-left', sa.left + 'px');
+    root.style.setProperty('--safe-area-right', sa.right + 'px');
+  }
+
+  // Enable native header / bottom bar color matching
+  tg.setHeaderColor?.(tp.header_bg_color || tp.bg_color);
+  tg.setBottomBarColor?.(tp.bottom_bar_bg_color || tp.bg_color);
 }
 
 // ── Initialization ──────────────────────────────────────────────────
@@ -611,6 +632,7 @@ async function init() {
     // 5. Setup admin UI
     if (isAdmin) {
       $('#admin-badge').style.display = 'inline-block';
+      $('#sync-btn').style.display = 'inline-flex';
       $('#team-switcher').style.display = 'block';
       await loadTeamsForSwitcher();
       currentTeamUuid = userTeam ? userTeam.uuid : '__all__';
@@ -692,8 +714,33 @@ function bindListeners() {
     input.value = '';
     $('#event-preview').style.display = 'none';
 
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-      window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    const tg = window.Telegram?.WebApp;
+    if (tg?.HapticFeedback) {
+      tg.HapticFeedback.impactOccurred('medium');
+    }
+  });
+
+  // Sync button
+  $('#sync-btn').addEventListener('click', async () => {
+    const btn = $('#sync-btn');
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    try {
+      const data = await api('/api/sync-hrm', { method: 'POST' });
+      if (data) {
+        showToast('Synced — ' + data.teams_count + ' teams loaded');
+        await loadTeamsForSwitcher();
+        await fetchEvents();
+      }
+    } catch (err) {
+      showToast('Sync failed — ' + err.message);
+    } finally {
+      btn.textContent = '🔄';
+      btn.disabled = false;
+    }
+    const tg = window.Telegram?.WebApp;
+    if (tg?.HapticFeedback) {
+      tg.HapticFeedback.notificationOccurred('success');
     }
   });
 
