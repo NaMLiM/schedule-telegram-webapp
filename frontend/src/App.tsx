@@ -145,8 +145,10 @@ export default function App() {
       toast.success(`Event${dates.length > 1 ? 's' : ''} added`)
       setShowAddModal(false)
       await fetchEvents()
-    } catch {
-      toast.error('Failed to add event')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to add event'
+      toast.error(msg)
+      throw new Error(msg)
     }
   }
 

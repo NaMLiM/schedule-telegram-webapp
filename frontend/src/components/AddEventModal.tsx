@@ -31,6 +31,7 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
   const [specificDays, setSpecificDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [repeatCount, setRepeatCount] = useState(7)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Reset state when modal opens
   useEffect(() => {
@@ -76,9 +77,16 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
     )
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!hasValidInput || !parsed) return
-    onConfirm(allDates, parsed.description, [...selected])
+    setSubmitError(null)
+    try {
+      await onConfirm(allDates, parsed.description, [...selected])
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setSubmitError(msg)
+      console.error('[AddEvent] Submit failed:', err)
+    }
   }
 
   const toggleEmployee = (uuid: string) => {
@@ -235,6 +243,11 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
           </div>
         </div>
 
+        {submitError && (
+          <div className="px-3 py-2 rounded-md bg-destructive/10 text-xs text-destructive border border-destructive/20">
+            <strong>Error:</strong> {submitError}
+          </div>
+        )}
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={!hasValidInput}>
