@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { parseEventText, formatDate, formatDateLong, dayKey } from '@/lib/date-parser'
+import { Calendar, Check } from 'lucide-react'
+import { parseEventText, formatDate, formatDateLong } from '@/lib/date-parser'
 import { type RepeatMode, expandDates, getLabel, getDayLabel } from '@/lib/recurrence'
 import type { Employee } from '@/types'
 
@@ -99,8 +100,9 @@ export function AddEventModal({ open, prefillDate, employees, onConfirm, onClose
         <div className="space-y-4">
           {/* Date display when pre-filled from calendar */}
           {hasPrefill && (
-            <div className="px-3 py-2 rounded-md bg-primary/10 text-sm font-medium text-primary">
-              📅 {formatDateLong(prefillDate!)}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 text-sm font-medium text-primary">
+              <Calendar className="size-4" />
+              <span>{formatDateLong(prefillDate!)}</span>
             </div>
           )}
 
@@ -214,7 +216,7 @@ export function AddEventModal({ open, prefillDate, employees, onConfirm, onClose
                           ? 'bg-primary border-primary text-primary-foreground'
                           : 'border-muted-foreground/30'
                       )}>
-                        {isSelected ? '✓' : ''}
+                        {isSelected ? <Check className="size-3" /> : ''}
                       </span>
                       <span className="flex-1 text-sm">{emp.name}</span>
                       {emp.role === 'lead' && (

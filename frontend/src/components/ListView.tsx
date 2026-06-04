@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Trash2, Inbox } from 'lucide-react'
 import { formatDateLong } from '@/lib/date-parser'
 import type { Event, Employee } from '@/types'
 
@@ -28,7 +29,7 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <div className="text-3xl mb-2">📭</div>
+        <Inbox className="size-8 mb-2" />
         <p>No scheduled events</p>
       </div>
     )
@@ -78,7 +79,7 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
                       onClick={() => onDelete(ev.id, ev.series_id || null)}
                       title="Delete"
                     >
-                      🗑
+                      <Trash2 className="size-4" />
                     </Button>
                   )}
                 </div>

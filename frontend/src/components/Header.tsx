@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { RefreshCw } from 'lucide-react'
 import type { Team } from '@/types'
 
 interface HeaderProps {
@@ -31,7 +32,7 @@ export function Header({ teamName, isAdmin, teams, currentTeamUuid, onTeamChange
               onClick={onSync}
               title="Sync employees"
             >
-              🔄
+              <RefreshCw className="size-4" />
             </Button>
             <select
               value={currentTeamUuid || '__all__'}

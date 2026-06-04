@@ -9,6 +9,7 @@ import { Header } from '@/components/Header'
 import { TabBar } from '@/components/TabBar'
 import { CalendarView } from '@/components/CalendarView'
 import { ListView } from '@/components/ListView'
+import { Plus } from 'lucide-react'
 import { AddEventModal } from '@/components/AddEventModal'
 
 import { Toaster } from '@/components/ui/sonner'
@@ -233,7 +234,7 @@ export default function App() {
         className="fixed bottom-24 right-4 z-30 size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center text-2xl active:scale-95 transition-transform"
         style={{ marginBottom: 'var(--content-safe-area-bottom, var(--safe-area-bottom))' }}
       >
-        +
+        <Plus className="size-6" />
       </button>
 
       <TabBar activeTab={viewMode} onTabChange={setViewMode} />

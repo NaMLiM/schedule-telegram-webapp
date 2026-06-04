@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { dayKey, dayKeyFromYMD, formatDateLong } from '@/lib/date-parser'
 import type { Event, Employee } from '@/types'
 
@@ -77,11 +78,11 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
     <div className="px-2 pb-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between px-2 py-3">
-        <Button variant="ghost" size="sm" onClick={goToPrev}>◀</Button>
+        <Button variant="ghost" size="sm" onClick={goToPrev}><ChevronLeft className="size-4" /></Button>
         <span className="font-medium">
           {MONTH_NAMES[month]} {year}
         </span>
-        <Button variant="ghost" size="sm" onClick={goToNext}>▶</Button>
+        <Button variant="ghost" size="sm" onClick={goToNext}><ChevronRight className="size-4" /></Button>
       </div>
 
       {/* Day names header */}
@@ -153,7 +154,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
                         onClick={() => onDelete(ev.id, ev.series_id || null)}
                         className="shrink-0 text-muted-foreground hover:text-destructive text-sm px-1"
                       >
-                        🗑
+                        <Trash2 className="size-4" />
                       </button>
                     )}
                   </div>

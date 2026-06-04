@@ -1,3 +1,5 @@
+import { CalendarDays, List } from 'lucide-react'
+
 interface TabBarProps {
   activeTab: 'calendar' | 'list'
   onTabChange: (tab: 'calendar' | 'list') => void
@@ -21,7 +23,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
             }
           `}
         >
-          <span className="text-xl leading-none">📅</span>
+          <CalendarDays className="size-5" />
           <span className="text-[10px] font-medium">Calendar</span>
         </button>
 
@@ -36,7 +38,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
             }
           `}
         >
-          <span className="text-xl leading-none">📋</span>
+          <List className="size-5" />
           <span className="text-[10px] font-medium">List</span>
         </button>
       </div>
