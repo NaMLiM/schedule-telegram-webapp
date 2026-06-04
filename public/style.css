@@ -152,6 +152,12 @@ html, body {
   background: var(--tg-theme-accent-text-color);
   color: var(--tg-theme-button-text-color);
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .team-switcher {
   background: var(--tg-theme-secondary-bg-color);
   color: var(--tg-theme-text-color);
