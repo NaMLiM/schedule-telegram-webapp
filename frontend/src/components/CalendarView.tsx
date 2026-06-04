@@ -1,40 +1,52 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { dayKey, dayKeyFromYMD } from '@/lib/date-parser'
-import type { Event } from '@/types'
+import { Badge } from '@/components/ui/badge'
+import { dayKey, dayKeyFromYMD, formatDateLong } from '@/lib/date-parser'
+import type { Event, Employee } from '@/types'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 interface CalendarViewProps {
   events: Event[]
-  onDayClick: (date: string) => void
+  employees: Employee[]
+  currentUserId: string
+  isAdmin: boolean
+  onDelete: (eventId: number, seriesId: string | null) => void
 }
 
-export function CalendarView({ events, onDayClick }: CalendarViewProps) {
+function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
+  try {
+    const uuids: string[] = JSON.parse(uuidJson)
+    if (!Array.isArray(uuids) || uuids.length === 0) return []
+    return uuids.map(u => {
+      const emp = employees.find(e => e.employee_uuid === u)
+      return emp ? emp.name : u
+    })
+  } catch {
+    return []
+  }
+}
+
+export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete }: CalendarViewProps) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const todayStr = dayKey(now)
   const eventDays = new Set(events.map(e => e.event_date))
 
   const goToPrev = () => {
-    if (month === 0) {
-      setMonth(11)
-      setYear(y => y - 1)
-    } else {
-      setMonth(m => m - 1)
-    }
+    setSelectedDate(null)
+    if (month === 0) { setMonth(11); setYear(y => y - 1) }
+    else { setMonth(m => m - 1) }
   }
 
   const goToNext = () => {
-    if (month === 11) {
-      setMonth(0)
-      setYear(y => y + 1)
-    } else {
-      setMonth(m => m + 1)
-    }
+    setSelectedDate(null)
+    if (month === 11) { setMonth(0); setYear(y => y + 1) }
+    else { setMonth(m => m + 1) }
   }
 
   const firstDay = new Date(year, month, 1).getDay()
@@ -43,27 +55,25 @@ export function CalendarView({ events, onDayClick }: CalendarViewProps) {
 
   const cells: { label: string; dateStr: string; isOtherMonth: boolean }[] = []
 
-  // Previous month trailing days
   for (let i = firstDay - 1; i >= 0; i--) {
-    const day = daysInPrevMonth - i
-    cells.push({ label: String(day), dateStr: '', isOtherMonth: true })
+    cells.push({ label: String(daysInPrevMonth - i), dateStr: '', isOtherMonth: true })
   }
-
-  // Current month days
   for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = dayKeyFromYMD(year, month, d)
-    cells.push({ label: String(d), dateStr, isOtherMonth: false })
+    cells.push({ label: String(d), dateStr: dayKeyFromYMD(year, month, d), isOtherMonth: false })
   }
-
-  // Next month leading days
   const totalCells = firstDay + daysInMonth
   const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7)
   for (let d = 1; d <= remaining; d++) {
     cells.push({ label: String(d), dateStr: '', isOtherMonth: true })
   }
 
+  // Events for selected date
+  const dayEvents = selectedDate
+    ? events.filter(e => e.event_date === selectedDate)
+    : []
+
   return (
-    <div className="px-2">
+    <div className="px-2 pb-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between px-2 py-3">
         <Button variant="ghost" size="sm" onClick={goToPrev}>◀</Button>
@@ -76,9 +86,7 @@ export function CalendarView({ events, onDayClick }: CalendarViewProps) {
       {/* Day names header */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_NAMES.map(d => (
-          <div key={d} className="text-center text-xs text-muted-foreground py-1">
-            {d}
-          </div>
+          <div key={d} className="text-center text-xs text-muted-foreground py-1">{d}</div>
         ))}
       </div>
 
@@ -86,31 +94,74 @@ export function CalendarView({ events, onDayClick }: CalendarViewProps) {
       <div className="grid grid-cols-7">
         {cells.map((cell, i) => {
           const isToday = cell.dateStr === todayStr
+          const isSelected = cell.dateStr === selectedDate
           const hasEvents = eventDays.has(cell.dateStr)
 
           return (
             <button
               key={i}
               disabled={cell.isOtherMonth}
-              onClick={() => cell.dateStr && onDayClick(cell.dateStr)}
+              onClick={() => cell.dateStr && setSelectedDate(cell.dateStr === selectedDate ? null : cell.dateStr)}
               className={`
                 aspect-square flex flex-col items-center justify-center text-sm rounded-md
-                transition-colors
+                transition-colors relative
                 ${cell.isOtherMonth ? 'text-muted-foreground/30 cursor-default' : 'hover:bg-accent cursor-pointer'}
-                ${isToday ? 'bg-primary text-primary-foreground hover:bg-primary/80' : ''}
+                ${isToday && !isSelected ? 'bg-primary/10 text-primary font-semibold' : ''}
+                ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
               `}
             >
               {cell.label}
               {hasEvents && !cell.isOtherMonth && (
-                <span className={`
-                  w-1.5 h-1.5 rounded-full mt-0.5
-                  ${isToday ? 'bg-primary-foreground' : 'bg-primary'}
-                `} />
+                <span className={`absolute bottom-1.5 w-1 h-1 rounded-full ${isToday ? 'bg-primary' : 'bg-primary/60'}`} />
               )}
             </button>
           )
         })}
       </div>
+
+      {/* Day task list */}
+      {selectedDate && (
+        <div className="mt-4 border-t pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">{formatDateLong(selectedDate)}</h3>
+            <span className="text-xs text-muted-foreground">{dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          {dayEvents.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No events on this day</p>
+          ) : (
+            <div className="space-y-2">
+              {dayEvents.map(ev => {
+                const names = getEmployeeNames(ev.assigned_employee_uuids, employees)
+                const canDelete = isAdmin || String(ev.created_by_telegram_id) === String(currentUserId)
+
+                return (
+                  <div key={ev.id} className="flex items-start justify-between gap-2 p-3 rounded-lg border bg-card">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm">{ev.description}</p>
+                      {names.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {names.map(n => (
+                            <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {canDelete && (
+                      <button
+                        onClick={() => onDelete(ev.id, ev.series_id || null)}
+                        className="shrink-0 text-muted-foreground hover:text-destructive text-sm px-1"
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

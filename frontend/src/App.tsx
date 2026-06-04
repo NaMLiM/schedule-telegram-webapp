@@ -10,7 +10,7 @@ import { TabBar } from '@/components/TabBar'
 import { CalendarView } from '@/components/CalendarView'
 import { ListView } from '@/components/ListView'
 import { AddEventModal } from '@/components/AddEventModal'
-import { EventDetailModal } from '@/components/EventDetailModal'
+
 import { Toaster } from '@/components/ui/sonner'
 
 export default function App() {
@@ -24,7 +24,6 @@ export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [currentTeamUuid, setCurrentTeamUuid] = useState('')
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
-  const [detailDate, setDetailDate] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
 
   const isAdmin = userInfo?.is_admin ?? false
@@ -192,7 +191,13 @@ export default function App() {
       />
       <main className="flex-1 overflow-auto">
         {viewMode === 'calendar' ? (
-          <CalendarView events={events} onDayClick={setDetailDate} />
+          <CalendarView
+            events={events}
+            employees={employees}
+            currentUserId={userId}
+            isAdmin={isAdmin}
+            onDelete={handleDeleteEvent}
+          />
         ) : (
           <ListView
             events={events}
@@ -221,12 +226,6 @@ export default function App() {
       </button>
 
       <TabBar activeTab={viewMode} onTabChange={setViewMode} />
-      <EventDetailModal
-        date={detailDate}
-        events={events}
-        employees={employees}
-        onClose={() => setDetailDate(null)}
-      />
       <Toaster />
     </div>
   )

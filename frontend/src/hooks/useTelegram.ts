@@ -5,6 +5,28 @@ export interface TelegramUser {
   name: string
 }
 
+function applySafeArea() {
+  const tg = window.Telegram?.WebApp
+  if (!tg) return
+
+  const root = document.documentElement
+
+  // Set safe area inset values explicitly on :root (like FTTH does)
+  // This is more reliable than relying on CSS cascade from <body>
+  const sa = tg.safeAreaInset || {}
+  const csa = tg.contentSafeAreaInset || {}
+
+  root.style.setProperty('--tg-safe-area-inset-top', (sa.top ?? 0) + 'px')
+  root.style.setProperty('--tg-safe-area-inset-right', (sa.right ?? 0) + 'px')
+  root.style.setProperty('--tg-safe-area-inset-bottom', (sa.bottom ?? 0) + 'px')
+  root.style.setProperty('--tg-safe-area-inset-left', (sa.left ?? 0) + 'px')
+
+  root.style.setProperty('--tg-content-safe-area-inset-top', (csa.top ?? 0) + 'px')
+  root.style.setProperty('--tg-content-safe-area-inset-right', (csa.right ?? 0) + 'px')
+  root.style.setProperty('--tg-content-safe-area-inset-bottom', (csa.bottom ?? 0) + 'px')
+  root.style.setProperty('--tg-content-safe-area-inset-left', (csa.left ?? 0) + 'px')
+}
+
 export function useTelegram() {
   const [tgUser, setTgUser] = useState<TelegramUser | null>(null)
   const [ready, setReady] = useState(false)
@@ -15,6 +37,8 @@ export function useTelegram() {
 
     const root = document.documentElement
     root.classList.toggle('dark', tg.colorScheme === 'dark')
+
+    applySafeArea()
 
     const tp = tg.themeParams || {}
 
@@ -45,8 +69,13 @@ export function useTelegram() {
       if (val) root.style.setProperty(key, val)
     }
 
-    // TG SDK sets --tg-safe-area-inset-* CSS variables natively.
-    // CSS already maps those via var() chain — no JS needed.
+    // Match Telegram's native header/bottom bar background
+    try {
+      tg.setHeaderColor?.('bg_color')
+      tg.setBottomBarColor?.('bg_color')
+    } catch {
+      // unsupported on older clients
+    }
   }, [])
 
   useEffect(() => {
@@ -55,7 +84,11 @@ export function useTelegram() {
       tg.ready()
       tg.expand()
       applyTheme()
+
+      // Listen for live safe area changes (e.g. toggle fullscreen)
       tg.onEvent('themeChanged', applyTheme)
+      tg.onEvent('safeAreaChanged', applySafeArea)
+      tg.onEvent('contentSafeAreaChanged', applySafeArea)
 
       const user = tg.initDataUnsafe?.user
       if (user) {
@@ -63,13 +96,6 @@ export function useTelegram() {
           id: String(user.id),
           name: [user.first_name, user.last_name].filter(Boolean).join(' ') || `User ${user.id}`,
         })
-      }
-
-      try {
-        tg.setHeaderColor?.('bg_color')
-        tg.setBottomBarColor?.('bg_color')
-      } catch {
-        // silently ignore unsupported methods
       }
     } else {
       // Dev mode fallback
