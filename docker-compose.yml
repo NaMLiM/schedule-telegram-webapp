@@ -2,8 +2,6 @@ services:
   app:
     build: .
     container_name: schedule-telegram-webapp
-    ports:
-      - "${PORT:-3000}:3000"
     env_file:
       - .env
     volumes:
@@ -15,3 +13,23 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:alpine
+    container_name: schedule-telegram-nginx
+    ports:
+      - "${NGINX_PORT:-8080}:8080"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
