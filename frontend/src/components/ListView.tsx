@@ -11,7 +11,7 @@ interface ListViewProps {
   events: Event[]
   employees: Employee[]
   currentUserId: string
-  isAdmin: boolean
+  canManage: boolean
   onDelete: (eventId: number, seriesId: string | null) => void
 }
 
@@ -28,7 +28,7 @@ function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
   }
 }
 
-export function ListView({ events, employees, currentUserId, isAdmin, onDelete }: ListViewProps) {
+export function ListView({ events, employees, currentUserId, canManage, onDelete }: ListViewProps) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -88,7 +88,7 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
               <div className="space-y-2">
                 {grouped[date].map(ev => {
                   const names = getEmployeeNames(ev.assigned_employee_uuids, employees)
-                  const canDelete = isAdmin || String(ev.created_by_telegram_id) === String(currentUserId)
+                  const canDelete = canManage || String(ev.created_by_telegram_id) === String(currentUserId)
 
                   return (
                     <div

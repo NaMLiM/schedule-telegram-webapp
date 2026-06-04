@@ -28,6 +28,7 @@ export interface Event {
 export interface UserInfo {
   telegram_id: string
   is_admin: boolean
+  role: string | null
   team: { uuid: string; name: string } | null
   display_name: string | null
 }

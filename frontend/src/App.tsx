@@ -32,6 +32,8 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState<{ eventId: number; seriesId: string | null } | null>(null)
 
   const isAdmin = userInfo?.is_admin ?? false
+  const userRole = userInfo?.role ?? null
+  const canManage = isAdmin || userRole === 'lead'
   const userId = tgUser?.id || ''
 
   async function fetchEvents() {
@@ -242,7 +244,7 @@ export default function App() {
             events={events}
             employees={employees}
             currentUserId={userId}
-            isAdmin={isAdmin}
+            canManage={canManage}
             onDelete={handleDeleteEvent}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
@@ -252,7 +254,7 @@ export default function App() {
             events={events}
             employees={employees}
             currentUserId={userId}
-            isAdmin={isAdmin}
+            canManage={canManage}
             onDelete={handleDeleteEvent}
           />
         )}
@@ -274,9 +276,9 @@ export default function App() {
 
       {/* FAB button */}
       <button
-        onClick={() => setShowAddModal(true)}
+        onClick={() => canManage && setShowAddModal(true)}
         className="fixed bottom-24 right-4 z-30 size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center text-2xl active:scale-95 transition-transform"
-        style={{ marginBottom: 'var(--content-safe-area-bottom, var(--safe-area-bottom))' }}
+        style={{ opacity: canManage ? 1 : 0.3, marginBottom: 'var(--content-safe-area-bottom, var(--safe-area-bottom))' }}
       >
         <Plus className="size-6" />
       </button>

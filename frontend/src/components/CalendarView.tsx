@@ -12,7 +12,7 @@ interface CalendarViewProps {
   events: Event[]
   employees: Employee[]
   currentUserId: string
-  isAdmin: boolean
+  canManage: boolean
   onDelete: (eventId: number, seriesId: string | null) => void
   selectedDate: string
   onDateSelect: (date: string) => void
@@ -31,7 +31,7 @@ function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
   }
 }
 
-export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete, selectedDate, onDateSelect }: CalendarViewProps) {
+export function CalendarView({ events, employees, currentUserId, canManage, onDelete, selectedDate, onDateSelect }: CalendarViewProps) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -130,7 +130,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
             <div className="space-y-2">
               {dayEvents.map(ev => {
                 const names = getEmployeeNames(ev.assigned_employee_uuids, employees)
-                const canDelete = isAdmin || String(ev.created_by_telegram_id) === String(currentUserId)
+                const canDelete = canManage || String(ev.created_by_telegram_id) === String(currentUserId)
                 return (
                   <div key={ev.id} className="flex items-start justify-between gap-2 p-3 rounded-lg border bg-card">
                     <div className="min-w-0 space-y-1">

@@ -122,13 +122,21 @@ function authMiddleware(req, res, next) {
   req.telegramId = String(telegramId);
   req.isAdmin = ADMIN_IDS.includes(req.telegramId);
 
-  // Look up user team
+  // Look up user team + role
   if (!req.isAdmin) {
     const userTeam = db.prepare('SELECT team_uuid FROM user_teams WHERE telegram_id = ?').get(req.telegramId);
     if (!userTeam) {
       return res.status(403).json({ error: 'Access denied. You are not registered as an employee.' });
     }
     req.userTeamUuid = userTeam.team_uuid;
+
+    // Fetch employee role for this team (team leader can manage events)
+    const emp = db.prepare(
+      `SELECT e.role FROM synced_employees e
+       JOIN synced_teams t ON e.team_id = t.id
+       WHERE e.telegram_id = ? AND t.uuid = ?`
+    ).get(req.telegramId, userTeam.team_uuid);
+    req.userRole = emp ? emp.role : 'member';
   }
 
   next();
@@ -338,6 +346,7 @@ app.get('/api/user/me', authMiddleware, (req, res) => {
   res.json({
     telegram_id: req.telegramId,
     is_admin: req.isAdmin,
+    role: req.userRole || null,
     team: userTeamRow ? { uuid: userTeamRow.team_uuid, name: userTeamRow.team_name } : null,
     display_name: userTeamRow ? userTeamRow.display_name : null,
   });
@@ -381,6 +390,9 @@ app.post('/api/events', authMiddleware, (req, res) => {
     if (!team_uuid) return res.status(400).json({ error: 'team_uuid required for admin' });
     targetTeamUuid = team_uuid;
   } else {
+    if (req.userRole !== 'lead') {
+      return res.status(403).json({ error: 'Only the team leader can add events' });
+    }
     targetTeamUuid = req.userTeamUuid;
   }
 
@@ -418,6 +430,9 @@ app.post('/api/events/batch', authMiddleware, (req, res) => {
     if (!team_uuid) return res.status(400).json({ error: 'team_uuid required for admin' });
     targetTeamUuid = team_uuid;
   } else {
+    if (req.userRole !== 'lead') {
+      return res.status(403).json({ error: 'Only the team leader can add events' });
+    }
     targetTeamUuid = req.userTeamUuid;
   }
 
@@ -453,9 +468,10 @@ app.delete('/api/events/:id', authMiddleware, (req, res) => {
   const event = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
-  // Only creator or admin can delete
-  if (!req.isAdmin && String(event.created_by_telegram_id) !== String(req.telegramId)) {
-    return res.status(403).json({ error: 'Only the event creator or an admin can delete this event' });
+  // Only creator, admin, or team leader can delete
+  const isLeader = req.userRole === 'lead' && event.team_uuid === req.userTeamUuid;
+  if (!req.isAdmin && String(event.created_by_telegram_id) !== String(req.telegramId) && !isLeader) {
+    return res.status(403).json({ error: 'Only the event creator, team leader, or an admin can delete this event' });
   }
 
   const mode = req.query.mode || 'single';
