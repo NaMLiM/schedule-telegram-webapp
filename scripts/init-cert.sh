@@ -11,12 +11,10 @@ if [ -z "$DOMAIN" ]; then
   exit 1
 fi
 
-CLOUDFLARE_INI="${CLOUDFLARE_INI:-./nginx/cloudflare.ini}"
-
 # Build the certbot command
 docker compose run --rm certbot certonly \
   --dns-cloudflare \
-  --dns-cloudflare-credentials "$CLOUDFLARE_INI" \
+  --dns-cloudflare-credentials /cloudflare.ini \
   --email admin@"$DOMAIN" \
   --agree-tos \
   --no-eff-email \
