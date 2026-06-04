@@ -33,7 +33,7 @@ export default function App() {
 
   const isAdmin = userInfo?.is_admin ?? false
   const userRole = userInfo?.role ?? null
-  const canManage = isAdmin || userRole === 'lead'
+  const canManage = isAdmin || userRole === 'lead' || userRole === 'leader'
   const userId = tgUser?.id || ''
 
   async function fetchEvents() {

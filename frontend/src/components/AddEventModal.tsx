@@ -229,7 +229,7 @@ export function AddEventModal({ open, prefillDate, employees, onConfirm, onClose
                         {isSelected ? <Check className="size-3" /> : ''}
                       </span>
                       <span className="flex-1 text-sm">{emp.name}</span>
-                      {emp.role === 'lead' && (
+                      {emp.role === 'lead' || emp.role === 'leader' && (
                         <Badge variant="secondary" className="text-[10px] px-1 py-0">Lead</Badge>
                       )}
                     </button>
