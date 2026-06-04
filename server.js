@@ -308,6 +308,14 @@ app.get('/api/teams/:uuid/employees', (req, res) => {
   res.json({ employees });
 });
 
+// GET /api/employees — all employees across all teams (for UUID→name resolution)
+app.get('/api/employees', (req, res) => {
+  const employees = db.prepare(
+    'SELECT id, employee_uuid, name, employee_number, role FROM synced_employees ORDER BY team_id, name'
+  ).all();
+  res.json({ employees });
+});
+
 // GET /api/user/me
 app.get('/api/user/me', authMiddleware, (req, res) => {
   const userTeamRow = db.prepare(

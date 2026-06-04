@@ -75,6 +75,10 @@ export default function App() {
           setCurrentTeamUuid(userData.team?.uuid || '')
         }
 
+        // Load all employees for name resolution regardless of selected team
+        const empData = await api<{ employees: Employee[] }>('/api/employees')
+        if (empData) setEmployees(empData.employees)
+
         setLoading(false)
       } catch (err) {
         console.error('Init failed:', err)
@@ -91,13 +95,13 @@ export default function App() {
     if (userInfo) fetchEvents()
   }, [userInfo, currentTeamUuid])
 
-  // Load employees for current team
+  // Reload employees when switching teams (more specific data for picker)
   useEffect(() => {
     if (!currentTeamUuid || currentTeamUuid === '__all__') return
     api<{ employees: Employee[] }>(
       `/api/teams/${encodeURIComponent(currentTeamUuid)}/employees`
     ).then(data => {
-      if (data) setEmployees(data.employees)
+      if (data && data.employees.length > 0) setEmployees(data.employees)
     })
   }, [currentTeamUuid])
 
