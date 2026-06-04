@@ -1,16 +1,33 @@
-FROM node:22-alpine
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# ── Runtime stage ─────────────────────────────────────────────────────
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# Copy only production deps + app code
+COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
-EXPOSE 3000
+# Metadata
+LABEL org.opencontainers.image.title="Schedule Telegram Web App"
+LABEL org.opencontainers.image.description="Team event scheduling with Telegram Mini App integration"
+LABEL org.opencontainers.image.source="https://github.com/NaMLiM/schedule-telegram-webapp"
 
+EXPOSE 3000
 VOLUME ["/app/data"]
 
 ENV NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/status || exit 1
 
 CMD ["node", "server.js"]
