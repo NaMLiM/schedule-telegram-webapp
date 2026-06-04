@@ -13,6 +13,8 @@ interface CalendarViewProps {
   currentUserId: string
   isAdmin: boolean
   onDelete: (eventId: number, seriesId: string | null) => void
+  selectedDate: string | null
+  onDateSelect: (date: string | null) => void
 }
 
 function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
@@ -28,23 +30,22 @@ function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
   }
 }
 
-export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete }: CalendarViewProps) {
+export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete, selectedDate, onDateSelect }: CalendarViewProps) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const todayStr = dayKey(now)
   const eventDays = new Set(events.map(e => e.event_date))
 
   const goToPrev = () => {
-    setSelectedDate(null)
+    onDateSelect(null)
     if (month === 0) { setMonth(11); setYear(y => y - 1) }
     else { setMonth(m => m - 1) }
   }
 
   const goToNext = () => {
-    setSelectedDate(null)
+    onDateSelect(null)
     if (month === 11) { setMonth(0); setYear(y => y + 1) }
     else { setMonth(m => m + 1) }
   }
@@ -101,7 +102,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
             <button
               key={i}
               disabled={cell.isOtherMonth}
-              onClick={() => cell.dateStr && setSelectedDate(cell.dateStr === selectedDate ? null : cell.dateStr)}
+              onClick={() => cell.dateStr && onDateSelect(cell.dateStr === selectedDate ? null : cell.dateStr)}
               className={`
                 aspect-square flex flex-col items-center justify-center text-sm rounded-md
                 transition-colors relative

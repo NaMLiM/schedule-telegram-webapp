@@ -9,12 +9,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { parseEventText, formatDate, formatDateLong } from '@/lib/date-parser'
+import { parseEventText, formatDate, formatDateLong, dayKey } from '@/lib/date-parser'
 import { type RepeatMode, expandDates, getLabel, getDayLabel } from '@/lib/recurrence'
 import type { Employee } from '@/types'
 
 interface AddEventModalProps {
   open: boolean
+  prefillDate: string | null
   teamUuid: string | undefined
   employees: Employee[]
   onConfirm: (dates: string[], description: string, empUuids: string[]) => void
@@ -23,10 +24,10 @@ interface AddEventModalProps {
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
-export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventModalProps) {
+export function AddEventModal({ open, prefillDate, employees, onConfirm, onClose }: AddEventModalProps) {
   const [text, setText] = useState('')
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('none')
-  const [specificDays, setSpecificDays] = useState<number[]>([1, 2, 3, 4, 5]) // Mon-Fri default
+  const [specificDays, setSpecificDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [repeatCount, setRepeatCount] = useState(7)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -41,16 +42,24 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
     }
   }, [open])
 
-  const parsed = parseEventText(text)
-  const hasPreview = parsed && parsed.dates.length > 0 && text.trim().length > 0
+  // When a date is pre-filled from the calendar, use it directly.
+  // Otherwise fall back to text-based date parsing.
+  const hasPrefill = !!prefillDate
+  const parsed = hasPrefill
+    ? { dates: [prefillDate!], description: text.trim() }
+    : parseEventText(text)
 
-  const allDates = hasPreview && repeatMode !== 'none'
-    ? expandDates(parsed.dates, {
+  const hasValidInput = hasPrefill
+    ? text.trim().length > 0
+    : !!(parsed && parsed.dates.length > 0 && text.trim().length > 0)
+
+  const allDates = hasValidInput && repeatMode !== 'none'
+    ? expandDates(parsed!.dates, {
         mode: repeatMode,
         daysOfWeek: specificDays,
         count: repeatCount,
       })
-    : hasPreview ? parsed.dates : []
+    : parsed?.dates || []
 
   const previewText = allDates.length > 0
     ? allDates.length === 1
@@ -58,7 +67,7 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
       : `${formatDate(allDates[0])} — ${formatDate(allDates[allDates.length - 1])} (${allDates.length}x): ${parsed!.description}`
     : null
 
-  const showRepeatOptions = hasPreview && repeatMode !== 'none'
+  const showRepeatOptions = hasValidInput && repeatMode !== 'none'
 
   const toggleDay = (day: number) => {
     setSpecificDays(prev =>
@@ -67,8 +76,8 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
   }
 
   const handleSubmit = () => {
-    if (!hasPreview) return
-    onConfirm(allDates, parsed!.description, [...selected])
+    if (!hasValidInput || !parsed) return
+    onConfirm(allDates, parsed.description, [...selected])
   }
 
   const toggleEmployee = (uuid: string) => {
@@ -88,14 +97,23 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Date display when pre-filled from calendar */}
+          {hasPrefill && (
+            <div className="px-3 py-2 rounded-md bg-primary/10 text-sm font-medium text-primary">
+              📅 {formatDateLong(prefillDate!)}
+            </div>
+          )}
+
           {/* Event description */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Description & Date</label>
+            <label className="text-xs text-muted-foreground mb-1 block">
+              {hasPrefill ? 'Description' : 'Description & Date'}
+            </label>
             <input
               type="text"
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="e.g. June 5: Meeting"
+              placeholder={hasPrefill ? 'e.g. Meeting with Alex' : 'e.g. June 5: Meeting'}
               className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               autoFocus
             />
@@ -108,7 +126,7 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
             </div>
           )}
 
-          {/* Repeat options — only show when parsed date exists */}
+          {/* Repeat options */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">Repeat</label>
             <div className="flex flex-wrap gap-1.5">
@@ -131,7 +149,6 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
             {/* Repeat config — hidden when No repeat */}
             {showRepeatOptions && (
               <div className="mt-3 space-y-3">
-                {/* Day-of-week picker for 'specific' */}
                 {repeatMode === 'specific' && (
                   <div className="flex gap-1.5 flex-wrap">
                     {ALL_DAYS.map(d => (
@@ -151,7 +168,6 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
                   </div>
                 )}
 
-                {/* Repeat count row */}
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Repeat count</label>
                   <input
@@ -173,7 +189,7 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
           {/* Employee selector */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">
-              Assign to {employees.length > 0 && `(${employees.length}) — leave empty = team task`}
+              Assign to {employees.length > 0 && `(${employees.length})`} — leave empty = team task
             </label>
             <div className="space-y-1 max-h-48 overflow-y-auto rounded-md border">
               {employees.length === 0 ? (
@@ -214,7 +230,7 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!hasPreview}>
+          <Button onClick={handleSubmit} disabled={!hasValidInput}>
             Add Event{allDates.length > 1 ? `s (${allDates.length})` : ''}
           </Button>
         </DialogFooter>
