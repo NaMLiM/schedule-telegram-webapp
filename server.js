@@ -435,9 +435,8 @@ app.use((err, req, res, _next) => {
 });
 
 // ── Start ───────────────────────────────────────────────────────────
-// Remove old DB and re-seed fresh
-try { db.prepare('DELETE FROM synced_employees').run(); } catch {}
-try { db.prepare('DELETE FROM synced_teams').run(); } catch {}
+// Seed sample data only on first run (DB persisted via volume)
+// seedSampleData skips if synced_teams already has rows
 seedSampleData();
 
 app.listen(PORT, () => {
