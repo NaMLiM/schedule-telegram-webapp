@@ -34,8 +34,7 @@ export function Header({ teamName, isAdmin, teams, currentTeamUuid, onTeamChange
           <>
             <Button
               variant="ghost"
-              size="icon"
-              className="h-8 w-8"
+              size="icon-sm"
               onClick={onSync}
               title="Sync employees"
             >

@@ -97,7 +97,7 @@ export function CalendarView({ events, onDayClick }: CalendarViewProps) {
                 aspect-square flex flex-col items-center justify-center text-sm rounded-md
                 transition-colors
                 ${cell.isOtherMonth ? 'text-muted-foreground/30 cursor-default' : 'hover:bg-accent cursor-pointer'}
-                ${isToday ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
+                ${isToday ? 'bg-primary text-primary-foreground hover:bg-primary/80' : ''}
               `}
             >
               {cell.label}

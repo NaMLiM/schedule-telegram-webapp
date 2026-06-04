@@ -24,10 +24,6 @@ export function formatDateLong(ts: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
 
-export function isToday(ts: string): boolean {
-  return dayKey(new Date()) === ts
-}
-
 export interface ParseResult {
   dates: string[]
   description: string
@@ -38,7 +34,6 @@ export function parseEventText(text: string): ParseResult | null {
   if (!text) return null
 
   let desc = text
-  let dates: string[] = []
 
   // 1. "June 5-7: desc" or "June 5 - 7: desc" — date range
   const rangeRegex = /^(?:on\s+)?([A-Z][a-z]+)\s+(\d{1,2})\s*[-–to]+\s*(\d{1,2})\s*[:：]\s*(.+)/i
@@ -49,6 +44,7 @@ export function parseEventText(text: string): ParseResult | null {
       const year = new Date().getFullYear()
       const startDay = parseInt(rangeMatch[2])
       const endDay = parseInt(rangeMatch[3])
+      const dates: string[] = []
       for (let d = startDay; d <= endDay; d++) {
         dates.push(dayKey(new Date(year, month, d)))
       }
@@ -76,7 +72,7 @@ export function parseEventText(text: string): ParseResult | null {
   if (tomorrowMatch) {
     const tmr = new Date()
     tmr.setDate(tmr.getDate() + 1)
-    dates = [dayKey(tmr)]
+    const dates = [dayKey(tmr)]
     desc = tomorrowMatch[1].trim() || text.replace(/^tomorrow\s*/i, '')
     return { dates, description: desc }
   }
@@ -90,8 +86,7 @@ export function parseEventText(text: string): ParseResult | null {
     const daysUntil = ((targetDay + 7 - today.getDay()) % 7) + 7 // Next week
     const target = new Date(today)
     target.setDate(today.getDate() + daysUntil)
-    dates = [dayKey(target)]
-    return { dates, description: nextDayMatch[2].trim() || text }
+    return { dates: [dayKey(target)], description: nextDayMatch[2].trim() || text }
   }
 
   // 5. "Monday/Tuesday" (bare day name) → closest future occurrence
@@ -104,8 +99,7 @@ export function parseEventText(text: string): ParseResult | null {
     if (daysUntil === 0) daysUntil = 7 // If it's today, go next week
     const target = new Date(today)
     target.setDate(today.getDate() + daysUntil)
-    dates = [dayKey(target)]
-    return { dates, description: dayNameMatch[2].trim() || text }
+    return { dates: [dayKey(target)], description: dayNameMatch[2].trim() || text }
   }
 
   // 6. "in N days"
@@ -115,8 +109,7 @@ export function parseEventText(text: string): ParseResult | null {
     const n = parseInt(inDaysMatch[1])
     const target = new Date()
     target.setDate(target.getDate() + n)
-    dates = [dayKey(target)]
-    return { dates, description: inDaysMatch[2].trim() || text }
+    return { dates: [dayKey(target)], description: inDaysMatch[2].trim() || text }
   }
 
   // 7. Fallback: today

@@ -75,8 +75,8 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
                   {canDelete && (
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                      size="icon-sm"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={() => onDelete(ev.id)}
                       title="Delete"
                     >

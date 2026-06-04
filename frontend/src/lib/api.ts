@@ -12,7 +12,6 @@ export async function api<T = any>(
     'Content-Type': 'application/json',
   }
 
-  // Merge provided headers
   if (options.headers) {
     if (options.headers instanceof Headers) {
       options.headers.forEach((value, key) => { headers[key] = value })

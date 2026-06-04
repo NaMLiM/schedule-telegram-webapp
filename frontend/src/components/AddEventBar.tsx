@@ -45,9 +45,9 @@ export function AddEventBar({ onAdd }: AddEventBarProps) {
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="e.g. June 5: Meeting with Alex"
-          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <Button size="icon" className="h-10 w-10 shrink-0" onClick={handleSubmit}>
+        <Button size="icon" className="size-10 shrink-0" onClick={handleSubmit}>
           +
         </Button>
       </div>

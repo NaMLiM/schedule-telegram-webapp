@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { useTelegram } from '@/hooks/useTelegram'
 import { api, setTgId } from '@/lib/api'
 import type { UserInfo, Team, Employee, Event } from '@/types'
@@ -11,12 +12,10 @@ import { ListView } from '@/components/ListView'
 import { AddEventBar } from '@/components/AddEventBar'
 import { EmployeePicker } from '@/components/EmployeePicker'
 import { EventDetailModal } from '@/components/EventDetailModal'
-import { Toaster } from '@/components/ui/toaster'
-import { useToast } from '@/components/ui/use-toast'
+import { Toaster } from '@/components/ui/sonner'
 
 export default function App() {
   const { tgUser, ready: tgReady } = useTelegram()
-  const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
@@ -105,13 +104,13 @@ export default function App() {
     try {
       const data = await api<{ teams_count: number }>('/api/sync-hrm', { method: 'POST' })
       if (data) {
-        toast({ title: `Synced — ${data.teams_count} teams loaded` })
+        toast.success(`Synced — ${data.teams_count} teams loaded`)
         const teamData = await api<{ teams: Team[] }>('/api/teams')
         if (teamData) setTeams(teamData.teams)
         await fetchEvents()
       }
     } catch {
-      toast({ title: 'Sync failed', variant: 'destructive' })
+      toast.error('Sync failed')
     }
   }
 
@@ -119,7 +118,7 @@ export default function App() {
     if (!pickerState) return
     const teamUuid = isAdmin ? currentTeamUuid : userInfo?.team?.uuid
     if (!teamUuid) {
-      toast({ title: 'No team selected', variant: 'destructive' })
+      toast.error('No team selected')
       return
     }
     try {
@@ -132,21 +131,21 @@ export default function App() {
         if (isAdmin) body.team_uuid = teamUuid
         await api('/api/events', { method: 'POST', body: JSON.stringify(body) })
       }
-      toast({ title: `Event${pickerState.dates.length > 1 ? 's' : ''} added` })
+      toast.success(`Event${pickerState.dates.length > 1 ? 's' : ''} added`)
       setPickerState(null)
       await fetchEvents()
     } catch {
-      toast({ title: 'Failed to add event', variant: 'destructive' })
+      toast.error('Failed to add event')
     }
   }
 
   async function handleDeleteEvent(eventId: number) {
     try {
       await api(`/api/events/${eventId}`, { method: 'DELETE' })
-      toast({ title: 'Event deleted' })
+      toast.success('Event deleted')
       await fetchEvents()
     } catch {
-      toast({ title: 'Failed to delete event', variant: 'destructive' })
+      toast.error('Failed to delete event')
     }
   }
 
