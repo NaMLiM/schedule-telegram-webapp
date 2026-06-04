@@ -12,6 +12,7 @@ import { CalendarView } from '@/components/CalendarView'
 import { ListView } from '@/components/ListView'
 import { Plus } from 'lucide-react'
 import { AddEventModal } from '@/components/AddEventModal'
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 
 import { Toaster } from '@/components/ui/sonner'
 
@@ -28,6 +29,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string>(dayKey(new Date()))
   const [showAddModal, setShowAddModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ eventId: number; seriesId: string | null } | null>(null)
 
   const isAdmin = userInfo?.is_admin ?? false
   const userId = tgUser?.id || ''
@@ -170,18 +172,11 @@ export default function App() {
     const event = events.find(e => e.id === eventId)
     if (!event) return
 
-    // If part of a series, ask how to delete
-    if (seriesId && !confirm('Delete only this day? OK = this day only, Cancel = this and all future dates')) {
-      // Cancel = delete this and future
-      try {
-        const data = await api<{ count: number }>(`/api/events/${eventId}?mode=series`, { method: 'DELETE' })
-        if (data) toast.success(`Deleted ${data.count} event${data.count > 1 ? 's' : ''}`)
-        await fetchEvents()
-      } catch {
-        toast.error('Failed to delete events')
-      }
+    if (seriesId) {
+      // Show dialog for series events
+      setDeleteTarget({ eventId, seriesId })
     } else {
-      // OK or no series = delete single
+      // Single event — delete directly
       try {
         await api(`/api/events/${eventId}?mode=single`, { method: 'DELETE' })
         toast.success('Event deleted')
@@ -189,6 +184,32 @@ export default function App() {
       } catch {
         toast.error('Failed to delete event')
       }
+    }
+  }
+
+  async function deleteSingle() {
+    if (!deleteTarget) return
+    const { eventId } = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await api(`/api/events/${eventId}?mode=single`, { method: 'DELETE' })
+      toast.success('Event deleted')
+      await fetchEvents()
+    } catch {
+      toast.error('Failed to delete event')
+    }
+  }
+
+  async function deleteSeries() {
+    if (!deleteTarget) return
+    const { eventId, seriesId } = deleteTarget
+    setDeleteTarget(null)
+    try {
+      const data = await api<{ count: number }>(`/api/events/${eventId}?mode=series`, { method: 'DELETE' })
+      if (data) toast.success(`Deleted ${data.count} event${data.count > 1 ? 's' : ''}`)
+      await fetchEvents()
+    } catch {
+      toast.error('Failed to delete events')
     }
   }
 
@@ -236,6 +257,12 @@ export default function App() {
           />
         )}
       </main>
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onSingle={deleteSingle}
+        onSeries={deleteSeries}
+      />
       <AddEventModal
         open={showAddModal}
         prefillDate={selectedDate}
