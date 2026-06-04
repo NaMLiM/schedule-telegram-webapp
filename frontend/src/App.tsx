@@ -9,8 +9,7 @@ import { Header } from '@/components/Header'
 import { TabBar } from '@/components/TabBar'
 import { CalendarView } from '@/components/CalendarView'
 import { ListView } from '@/components/ListView'
-import { AddEventBar } from '@/components/AddEventBar'
-import { EmployeePicker } from '@/components/EmployeePicker'
+import { AddEventModal } from '@/components/AddEventModal'
 import { EventDetailModal } from '@/components/EventDetailModal'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -26,7 +25,7 @@ export default function App() {
   const [currentTeamUuid, setCurrentTeamUuid] = useState('')
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [detailDate, setDetailDate] = useState<string | null>(null)
-  const [pickerState, setPickerState] = useState<{ dates: string[]; description: string } | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const isAdmin = userInfo?.is_admin ?? false
   const userId = tgUser?.id || ''
@@ -114,25 +113,24 @@ export default function App() {
     }
   }
 
-  async function handleConfirmEvent(empUuids: string[]) {
-    if (!pickerState) return
+  async function handleAddEvent(dates: string[], description: string, empUuids: string[]) {
     const teamUuid = isAdmin ? currentTeamUuid : userInfo?.team?.uuid
     if (!teamUuid) {
       toast.error('No team selected')
       return
     }
     try {
-      for (const date of pickerState.dates) {
+      for (const date of dates) {
         const body: Record<string, unknown> = {
           event_date: date,
-          description: pickerState.description,
+          description,
           assigned_employee_uuids: empUuids,
         }
         if (isAdmin) body.team_uuid = teamUuid
         await api('/api/events', { method: 'POST', body: JSON.stringify(body) })
       }
-      toast.success(`Event${pickerState.dates.length > 1 ? 's' : ''} added`)
-      setPickerState(null)
+      toast.success(`Event${dates.length > 1 ? 's' : ''} added`)
+      setShowAddModal(false)
       await fetchEvents()
     } catch {
       toast.error('Failed to add event')
@@ -185,14 +183,24 @@ export default function App() {
           />
         )}
       </main>
-      <AddEventBar onAdd={(dates, desc) => setPickerState({ dates, description: desc })} />
-      <TabBar activeTab={viewMode} onTabChange={setViewMode} />
-      <EmployeePicker
-        open={!!pickerState}
+      <AddEventModal
+        open={showAddModal}
+        teamUuid={isAdmin ? currentTeamUuid : userInfo?.team?.uuid}
         employees={employees}
-        onConfirm={handleConfirmEvent}
-        onCancel={() => setPickerState(null)}
+        onConfirm={handleAddEvent}
+        onClose={() => setShowAddModal(false)}
       />
+
+      {/* FAB button */}
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="fixed bottom-24 right-4 z-30 size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center text-2xl active:scale-95 transition-transform"
+        style={{ marginBottom: 'var(--safe-area-bottom)' }}
+      >
+        +
+      </button>
+
+      <TabBar activeTab={viewMode} onTabChange={setViewMode} />
       <EventDetailModal
         date={detailDate}
         events={events}
