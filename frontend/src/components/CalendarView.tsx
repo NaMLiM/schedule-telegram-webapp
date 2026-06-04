@@ -14,7 +14,7 @@ interface CalendarViewProps {
   currentUserId: string
   isAdmin: boolean
   onDelete: (eventId: number, seriesId: string | null) => void
-  selectedDate: string
+  selectedDates: string[]
   onDateSelect: (date: string) => void
 }
 
@@ -31,7 +31,7 @@ function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
   }
 }
 
-export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete, selectedDate, onDateSelect }: CalendarViewProps) {
+export function CalendarView({ events, employees, currentUserId, isAdmin, onDelete, selectedDates, onDateSelect }: CalendarViewProps) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -68,9 +68,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
   }
 
   // Events for selected date
-  const dayEvents = selectedDate
-    ? events.filter(e => e.event_date === selectedDate)
-    : []
+  const dayEvents = events.filter(e => selectedDates.includes(e.event_date))
 
   return (
     <div className="px-2 pb-4">
@@ -94,7 +92,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
       <div className="grid grid-cols-7">
         {cells.map((cell, i) => {
           const isToday = cell.dateStr === todayStr
-          const isSelected = cell.dateStr === selectedDate
+          const isSelected = selectedDates.includes(cell.dateStr)
           const hasEvents = eventDays.has(cell.dateStr)
 
           return (
@@ -122,38 +120,75 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
       {/* Day task list */}
         <div className="mt-4 border-t pt-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold">{formatDateLong(selectedDate)}</h3>
+            <h3 className="text-sm font-semibold">
+              {selectedDates.length === 1
+                ? formatDateLong(selectedDates[0])
+                : `${selectedDates.length} days selected`}
+            </h3>
             <span className="text-xs text-muted-foreground">{dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}</span>
           </div>
 
           {dayEvents.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No events on this day</p>
-          ) : (
+            <p className="text-xs text-muted-foreground py-4 text-center">No events on selected days</p>
+          ) : selectedDates.length === 1 ? (
             <div className="space-y-2">
               {dayEvents.map(ev => {
                 const names = getEmployeeNames(ev.assigned_employee_uuids, employees)
                 const canDelete = isAdmin || String(ev.created_by_telegram_id) === String(currentUserId)
-
                 return (
                   <div key={ev.id} className="flex items-start justify-between gap-2 p-3 rounded-lg border bg-card">
                     <div className="min-w-0 space-y-1">
                       <p className="text-sm">{ev.description}</p>
                       <div className="flex flex-wrap gap-1">
-                    {names.length > 0 ? names.map(n => (
-                      <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
-                    )) : (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">Team task</Badge>
-                    )}
-                  </div>
+                        {names.length > 0 ? names.map(n => (
+                          <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
+                        )) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">Team task</Badge>
+                        )}
+                      </div>
                     </div>
                     {canDelete && (
-                      <button
-                        onClick={() => onDelete(ev.id, ev.series_id || null)}
-                        className="shrink-0 text-muted-foreground hover:text-destructive text-sm px-1"
-                      >
+                      <button onClick={() => onDelete(ev.id, ev.series_id || null)} className="shrink-0 text-muted-foreground hover:text-destructive text-sm px-1">
                         <Trash2 className="size-4" />
                       </button>
                     )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {selectedDates.map(date => {
+                const dateEvs = events.filter(e => e.event_date === date)
+                if (dateEvs.length === 0) return null
+                return (
+                  <div key={date}>
+                    <div className="text-xs font-semibold text-muted-foreground mb-1.5">{formatDateLong(date)}</div>
+                    <div className="space-y-2">
+                      {dateEvs.map(ev => {
+                        const names = getEmployeeNames(ev.assigned_employee_uuids, employees)
+                        const canDelete = isAdmin || String(ev.created_by_telegram_id) === String(currentUserId)
+                        return (
+                          <div key={ev.id} className="flex items-start justify-between gap-2 p-3 rounded-lg border bg-card">
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-sm">{ev.description}</p>
+                              <div className="flex flex-wrap gap-1">
+                                {names.length > 0 ? names.map(n => (
+                                  <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
+                                )) : (
+                                  <Badge variant="outline" className="text-xs text-muted-foreground">Team task</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {canDelete && (
+                              <button onClick={() => onDelete(ev.id, ev.series_id || null)} className="shrink-0 text-muted-foreground hover:text-destructive text-sm px-1">
+                                <Trash2 className="size-4" />
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )
               })}
