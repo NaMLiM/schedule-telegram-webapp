@@ -14,8 +14,8 @@ interface CalendarViewProps {
   currentUserId: string
   isAdmin: boolean
   onDelete: (eventId: number, seriesId: string | null) => void
-  selectedDate: string | null
-  onDateSelect: (date: string | null) => void
+  selectedDate: string
+  onDateSelect: (date: string) => void
 }
 
 function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
@@ -40,13 +40,11 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
   const eventDays = new Set(events.map(e => e.event_date))
 
   const goToPrev = () => {
-    onDateSelect(null)
     if (month === 0) { setMonth(11); setYear(y => y - 1) }
     else { setMonth(m => m - 1) }
   }
 
   const goToNext = () => {
-    onDateSelect(null)
     if (month === 11) { setMonth(0); setYear(y => y + 1) }
     else { setMonth(m => m + 1) }
   }
@@ -103,7 +101,7 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
             <button
               key={i}
               disabled={cell.isOtherMonth}
-              onClick={() => cell.dateStr && onDateSelect(cell.dateStr === selectedDate ? null : cell.dateStr)}
+              onClick={() => cell.dateStr && onDateSelect(cell.dateStr)}
               className={`
                 aspect-square flex flex-col items-center justify-center text-sm rounded-md
                 transition-colors relative
@@ -122,7 +120,6 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
       </div>
 
       {/* Day task list */}
-      {selectedDate && (
         <div className="mt-4 border-t pt-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{formatDateLong(selectedDate)}</h3>
@@ -163,7 +160,6 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
             </div>
           )}
         </div>
-      )}
     </div>
   )
 }

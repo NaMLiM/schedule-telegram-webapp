@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTelegram } from '@/hooks/useTelegram'
 import { api, setTgId } from '@/lib/api'
+import { dayKey } from '@/lib/date-parser'
 import type { UserInfo, Team, Employee, Event } from '@/types'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { AccessDenied } from '@/components/AccessDenied'
@@ -25,7 +26,7 @@ export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [currentTeamUuid, setCurrentTeamUuid] = useState('')
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>(dayKey(new Date()))
   const [showAddModal, setShowAddModal] = useState(false)
 
   const isAdmin = userInfo?.is_admin ?? false
