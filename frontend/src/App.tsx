@@ -172,7 +172,6 @@ export default function App() {
         onTeamChange={setCurrentTeamUuid}
         onSync={handleSync}
       />
-      <TabBar activeTab={viewMode} onTabChange={setViewMode} />
       <main className="flex-1 overflow-auto">
         {viewMode === 'calendar' ? (
           <CalendarView events={events} onDayClick={setDetailDate} />
@@ -187,6 +186,7 @@ export default function App() {
         )}
       </main>
       <AddEventBar onAdd={(dates, desc) => setPickerState({ dates, description: desc })} />
+      <TabBar activeTab={viewMode} onTabChange={setViewMode} />
       <EmployeePicker
         open={!!pickerState}
         employees={employees}

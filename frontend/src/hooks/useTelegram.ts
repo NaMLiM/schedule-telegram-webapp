@@ -19,27 +19,26 @@ export function useTelegram() {
     const tp = tg.themeParams || {}
 
     // Map Telegram theme params to shadcn CSS variables
-    // This makes Telegram's native colors apply to all shadcn/Tailwind components
     const map: Record<string, string | undefined> = {
       '--background': tp.bg_color,
       '--foreground': tp.text_color,
+      '--muted': tp.secondary_bg_color,
       '--muted-foreground': tp.hint_color,
       '--ring': tp.link_color || tp.button_color,
       '--primary': tp.button_color,
       '--primary-foreground': tp.button_text_color,
       '--secondary': tp.secondary_bg_color,
+      '--secondary-foreground': tp.text_color,
       '--card': tp.section_bg_color || tp.secondary_bg_color || tp.bg_color,
+      '--card-foreground': tp.text_color,
       '--popover': tp.section_bg_color || tp.secondary_bg_color || tp.bg_color,
+      '--popover-foreground': tp.text_color,
       '--destructive': tp.destructive_text_color || '#ff3b30',
+      '--destructive-foreground': tp.button_text_color || tp.bg_color,
       '--accent': tp.section_header_text_color || tp.button_color,
-      '--border': tp.hint_color || tp.secondary_bg_color || tp.bg_color,
+      '--accent-foreground': tp.button_text_color || tp.text_color,
+      '--border': tp.hint_color || tp.secondary_bg_color,
       '--input': tp.hint_color || tp.secondary_bg_color,
-      // Also set TG-specific vars for any custom CSS
-      '--tg-theme-header-bg-color': tp.header_bg_color || tp.bg_color,
-      '--tg-theme-bottom-bar-bg-color': tp.bottom_bar_bg_color || tp.bg_color,
-      '--tg-theme-accent-text-color': tp.accent_text_color || tp.button_color,
-      '--tg-theme-section-header-text-color': tp.section_header_text_color || tp.button_color,
-      '--tg-theme-subtitle-text-color': tp.subtitle_text_color || tp.hint_color,
     }
 
     for (const [key, val] of Object.entries(map)) {

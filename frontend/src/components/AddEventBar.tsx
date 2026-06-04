@@ -41,7 +41,7 @@ export function AddEventBar({ onAdd }: AddEventBarProps) {
   }
 
   return (
-    <div className="border-t bg-card px-4 py-3 pb-[calc(0.75rem+var(--safe-area-bottom,0px))]">
+    <div className="border-t bg-card px-4 py-3">
       {previewText && (
         <div className="mb-2 px-3 py-1.5 rounded-md bg-muted/50 text-xs text-muted-foreground">
           <strong>{previewText}</strong>
