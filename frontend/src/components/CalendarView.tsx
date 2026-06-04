@@ -139,13 +139,13 @@ export function CalendarView({ events, employees, currentUserId, isAdmin, onDele
                   <div key={ev.id} className="flex items-start justify-between gap-2 p-3 rounded-lg border bg-card">
                     <div className="min-w-0 space-y-1">
                       <p className="text-sm">{ev.description}</p>
-                      {names.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {names.map(n => (
-                            <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                    {names.length > 0 ? names.map(n => (
+                      <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
+                    )) : (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">Team task</Badge>
+                    )}
+                  </div>
                     </div>
                     {canDelete && (
                       <button

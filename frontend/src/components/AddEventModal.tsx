@@ -173,7 +173,7 @@ export function AddEventModal({ open, employees, onConfirm, onClose }: AddEventM
           {/* Employee selector */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">
-              Assign to {employees.length > 0 && `(${employees.length})`}
+              Assign to {employees.length > 0 && `(${employees.length}) — leave empty = team task`}
             </label>
             <div className="space-y-1 max-h-48 overflow-y-auto rounded-md border">
               {employees.length === 0 ? (

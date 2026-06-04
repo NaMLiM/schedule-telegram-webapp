@@ -62,15 +62,13 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
                 >
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-sm">{ev.description}</p>
-                    {names.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {names.map(n => (
-                          <Badge key={n} variant="secondary" className="text-xs">
-                            {n}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {names.length > 0 ? names.map(n => (
+                        <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
+                      )) : (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">Team task</Badge>
+                      )}
+                    </div>
                   </div>
                   {canDelete && (
                     <Button
