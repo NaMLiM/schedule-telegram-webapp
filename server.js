@@ -247,12 +247,14 @@ async function syncFromHrm() {
       );
 
       const activeTelegramIds = new Set();
+      const activeEmployeeUuids = new Set();
 
       for (const team of teams) {
         const result = insertTeam.run(team.uuid, team.name, team.team_type || 'general');
         const teamId = Number(result.lastInsertRowid);
         for (const m of team.members || []) {
           insertEmp.run(m.employee_uuid, teamId, m.name, m.employee_number || null, m.telegram_id || null, m.role || 'member');
+          activeEmployeeUuids.add(m.employee_uuid);
           // Auto-register employees with telegram_id into the app
           if (m.telegram_id) {
             upsertUser.run(String(m.telegram_id), team.uuid, m.name);
@@ -265,6 +267,20 @@ async function syncFromHrm() {
       if (activeTelegramIds.size > 0) {
         const placeholders = [...activeTelegramIds].map(() => '?').join(',');
         db.prepare(`DELETE FROM user_teams WHERE telegram_id NOT IN (${placeholders})`).run(...activeTelegramIds);
+      }
+
+      // Clean up events: remove deleted employee UUIDs from assigned_employee_uuids
+      const allEvents = db.prepare('SELECT id, assigned_employee_uuids FROM events').all();
+      const updateUuids = db.prepare('UPDATE events SET assigned_employee_uuids = ? WHERE id = ?');
+      for (const ev of allEvents) {
+        try {
+          const uuids = JSON.parse(ev.assigned_employee_uuids);
+          if (!Array.isArray(uuids)) continue;
+          const filtered = uuids.filter(u => activeEmployeeUuids.has(u));
+          if (filtered.length !== uuids.length) {
+            updateUuids.run(JSON.stringify(filtered), ev.id);
+          }
+        } catch { /* skip malformed JSON */ }
       }
 
       db.exec('COMMIT');
