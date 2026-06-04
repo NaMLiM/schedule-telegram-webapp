@@ -383,6 +383,52 @@ app.post('/api/events', authMiddleware, (req, res) => {
   res.status(201).json(created);
 });
 
+// POST /api/events/batch — create multiple events in one transaction
+app.post('/api/events/batch', authMiddleware, (req, res) => {
+  const { dates, description, assigned_employee_uuids, team_uuid, series_id } = req.body;
+
+  if (!dates || !Array.isArray(dates) || dates.length === 0 || !description) {
+    return res.status(400).json({ error: 'dates (array) and description are required' });
+  }
+
+  if (dates.length > 400) {
+    return res.status(400).json({ error: 'Max 400 events per batch' });
+  }
+
+  let targetTeamUuid;
+  if (req.isAdmin) {
+    if (!team_uuid) return res.status(400).json({ error: 'team_uuid required for admin' });
+    targetTeamUuid = team_uuid;
+  } else {
+    targetTeamUuid = req.userTeamUuid;
+  }
+
+  const team = db.prepare('SELECT uuid FROM synced_teams WHERE uuid = ?').get(targetTeamUuid);
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+
+  const empUuids = assigned_employee_uuids
+    ? JSON.stringify(assigned_employee_uuids)
+    : '[]';
+
+  const insert = db.prepare(
+    `INSERT INTO events (team_uuid, event_date, description, assigned_employee_uuids, created_by_telegram_id, series_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+
+  db.exec('BEGIN');
+  try {
+    for (const date of dates) {
+      insert.run(targetTeamUuid, date, description, empUuids, req.telegramId, series_id || null);
+    }
+    db.exec('COMMIT');
+    res.status(201).json({ created: dates.length });
+  } catch (e) {
+    db.exec('ROLLBACK');
+    console.error('[batch] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // DELETE /api/events/:id
 // Query params: ?mode=single (default) | ?mode=series (deletes this + future)
 app.delete('/api/events/:id', authMiddleware, (req, res) => {

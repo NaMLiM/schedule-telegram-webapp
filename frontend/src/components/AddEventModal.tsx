@@ -188,9 +188,9 @@ export function AddEventModal({ open, prefillDates, employees, onConfirm, onClos
                   <input
                     type="number"
                     min={0}
-                    max={365}
+                    max={100}
                     value={repeatCount}
-                    onChange={e => setRepeatCount(Math.max(0, Math.min(365, parseInt(e.target.value) || 0)))}
+                    onChange={e => setRepeatCount(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
                     className="w-16 h-8 text-xs rounded border border-input bg-background px-2 text-center"
                   />
                   <span className="text-xs text-muted-foreground">

@@ -7,7 +7,7 @@ export interface RepeatConfig {
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const INFINITE_LIMIT = 365 // safety cap for "always" repeats
+const INFINITE_LIMIT = 100 // safety cap for "always" repeats (0 = infinite)
 
 export function getLabel(mode: RepeatMode, _interval: number): string {
   switch (mode) {

@@ -129,12 +129,22 @@ export default function App() {
       return
     }
     try {
-      // Generate a series_id if creating multiple events (recurrence)
       const seriesId = dates.length > 1 ? crypto.randomUUID() : undefined
 
-      for (const date of dates) {
+      if (dates.length > 1) {
+        // Batch create — single request, no loop
         const body: Record<string, unknown> = {
-          event_date: date,
+          dates,
+          description,
+          assigned_employee_uuids: empUuids,
+        }
+        if (seriesId) body.series_id = seriesId
+        if (isAdmin) body.team_uuid = teamUuid
+        await api('/api/events/batch', { method: 'POST', body: JSON.stringify(body) })
+      } else {
+        // Single event
+        const body: Record<string, unknown> = {
+          event_date: dates[0],
           description,
           assigned_employee_uuids: empUuids,
         }
