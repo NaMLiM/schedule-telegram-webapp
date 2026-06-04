@@ -104,13 +104,13 @@ export default function App() {
       if (data) {
         toast.success(`Synced — ${data.teams_count} teams loaded`)
         const teamData = await api<{ teams: Team[] }>('/api/teams')
-        if (teamData) setTeams(teamData.teams)
-        // Also reload employees for current team
-        if (currentTeamUuid && currentTeamUuid !== '__all__') {
-          const empData = await api<{ employees: Employee[] }>(
-            `/api/teams/${encodeURIComponent(currentTeamUuid)}/employees`
-          )
-          if (empData) setEmployees(empData.employees)
+        if (teamData) {
+          setTeams(teamData.teams)
+          // If admin was on 'All Teams', switch to the first synced team
+          // so employees load immediately
+          if (isAdmin && currentTeamUuid === '__all__' && teamData.teams.length > 0) {
+            setCurrentTeamUuid(teamData.teams[0].uuid)
+          }
         }
         await fetchEvents()
       }
