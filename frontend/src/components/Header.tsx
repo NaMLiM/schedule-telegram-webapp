@@ -1,6 +1,13 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Team } from '@/types'
 
 interface HeaderProps {
@@ -34,16 +41,17 @@ export function Header({ teamName, isAdmin, teams, currentTeamUuid, onTeamChange
             >
               <RefreshCw className="size-4" />
             </Button>
-            <select
-              value={currentTeamUuid || '__all__'}
-              onChange={e => onTeamChange(e.target.value)}
-              className="h-8 max-w-[150px] text-xs rounded-md border border-input bg-background px-2 py-1 text-foreground"
-            >
-              <option value="__all__">All Teams</option>
-              {teams.map(t => (
-                <option key={t.uuid} value={t.uuid}>{t.name}</option>
-              ))}
-            </select>
+            <Select value={currentTeamUuid || '__all__'} onValueChange={onTeamChange}>
+              <SelectTrigger className="h-8 w-[140px] text-xs">
+                <SelectValue placeholder="Select team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Teams</SelectItem>
+                {teams.map(t => (
+                  <SelectItem key={t.uuid} value={t.uuid}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </>
         )}
       </div>
