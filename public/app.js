@@ -588,8 +588,11 @@ function applyTelegramTheme() {
   }
 
   // Enable native header / bottom bar color matching
-  tg.setHeaderColor?.(tp.header_bg_color || tp.bg_color);
-  tg.setBottomBarColor?.(tp.bottom_bar_bg_color || tp.bg_color);
+  // Only use predefined keys — hex colors throw on older Telegram clients
+  try {
+    tg.setHeaderColor?.('bg_color');
+    tg.setBottomBarColor?.('bg_color');
+  } catch (_) { /* unsupported on this version */ }
 }
 
 // ── Initialization ──────────────────────────────────────────────────
@@ -599,10 +602,15 @@ async function init() {
   if (tg) {
     tg.ready();
     tg.expand();
-    applyTelegramTheme();
+
+    try {
+      applyTelegramTheme();
+    } catch (_) {
+      console.warn('Theme failed to apply', _);
+    }
 
     tg.onEvent('themeChanged', () => {
-      applyTelegramTheme();
+      try { applyTelegramTheme(); } catch (_) {}
     });
 
     // 2. Get telegram user info
