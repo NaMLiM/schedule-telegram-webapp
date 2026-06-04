@@ -7,7 +7,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
   return (
     <div
       className="sticky bottom-0 z-20 border-t bg-card"
-      style={{ paddingBottom: 'var(--safe-area-bottom)' }}
+      style={{ paddingBottom: 'var(--content-safe-area-bottom, var(--safe-area-bottom))' }}
     >
       <div className="flex items-center justify-around py-1 max-w-[430px] mx-auto">
         <button

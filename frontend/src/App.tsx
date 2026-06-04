@@ -215,7 +215,7 @@ export default function App() {
       <button
         onClick={() => setShowAddModal(true)}
         className="fixed bottom-24 right-4 z-30 size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center text-2xl active:scale-95 transition-transform"
-        style={{ marginBottom: 'var(--safe-area-bottom)' }}
+        style={{ marginBottom: 'var(--content-safe-area-bottom, var(--safe-area-bottom))' }}
       >
         +
       </button>
