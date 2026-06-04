@@ -120,12 +120,16 @@ export default function App() {
       return
     }
     try {
+      // Generate a series_id if creating multiple events (recurrence)
+      const seriesId = dates.length > 1 ? crypto.randomUUID() : undefined
+
       for (const date of dates) {
         const body: Record<string, unknown> = {
           event_date: date,
           description,
           assigned_employee_uuids: empUuids,
         }
+        if (seriesId) body.series_id = seriesId
         if (isAdmin) body.team_uuid = teamUuid
         await api('/api/events', { method: 'POST', body: JSON.stringify(body) })
       }
@@ -137,13 +141,29 @@ export default function App() {
     }
   }
 
-  async function handleDeleteEvent(eventId: number) {
-    try {
-      await api(`/api/events/${eventId}`, { method: 'DELETE' })
-      toast.success('Event deleted')
-      await fetchEvents()
-    } catch {
-      toast.error('Failed to delete event')
+  async function handleDeleteEvent(eventId: number, seriesId: string | null) {
+    const event = events.find(e => e.id === eventId)
+    if (!event) return
+
+    // If part of a series, ask how to delete
+    if (seriesId && !confirm('Delete only this day? OK = this day only, Cancel = this and all future dates')) {
+      // Cancel = delete this and future
+      try {
+        const data = await api<{ count: number }>(`/api/events/${eventId}?mode=series`, { method: 'DELETE' })
+        if (data) toast.success(`Deleted ${data.count} event${data.count > 1 ? 's' : ''}`)
+        await fetchEvents()
+      } catch {
+        toast.error('Failed to delete events')
+      }
+    } else {
+      // OK or no series = delete single
+      try {
+        await api(`/api/events/${eventId}?mode=single`, { method: 'DELETE' })
+        toast.success('Event deleted')
+        await fetchEvents()
+      } catch {
+        toast.error('Failed to delete event')
+      }
     }
   }
 

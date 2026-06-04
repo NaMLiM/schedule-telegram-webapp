@@ -8,7 +8,7 @@ interface ListViewProps {
   employees: Employee[]
   currentUserId: string
   isAdmin: boolean
-  onDelete: (eventId: number) => void
+  onDelete: (eventId: number, seriesId: string | null) => void
 }
 
 function getEmployeeNames(uuidJson: string, employees: Employee[]): string[] {
@@ -77,7 +77,7 @@ export function ListView({ events, employees, currentUserId, isAdmin, onDelete }
                       variant="ghost"
                       size="icon-sm"
                       className="shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => onDelete(ev.id)}
+                      onClick={() => onDelete(ev.id, ev.series_id || null)}
                       title="Delete"
                     >
                       🗑

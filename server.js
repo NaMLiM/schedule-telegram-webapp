@@ -71,6 +71,14 @@ db.exec(`
   );
 `);
 
+// Migration: add series_id to events if missing
+try {
+  db.exec('ALTER TABLE events ADD COLUMN series_id TEXT');
+  console.log('[migration] Added series_id column to events');
+} catch {
+  // Already exists — ignore
+}
+
 // ── HMAC verification ───────────────────────────────────────────────
 function verifyTelegramInitData(initData, botToken) {
   if (!botToken) return true; // dev mode: accept all
@@ -344,7 +352,7 @@ app.get('/api/events/all', authMiddleware, adminOnly, (req, res) => {
 
 // POST /api/events
 app.post('/api/events', authMiddleware, (req, res) => {
-  const { event_date, description, assigned_employee_uuids, team_uuid } = req.body;
+  const { event_date, description, assigned_employee_uuids, team_uuid, series_id } = req.body;
 
   if (!event_date || !description) {
     return res.status(400).json({ error: 'event_date and description are required' });
@@ -367,15 +375,16 @@ app.post('/api/events', authMiddleware, (req, res) => {
     : '[]';
 
   const result = db.prepare(
-    `INSERT INTO events (team_uuid, event_date, description, assigned_employee_uuids, created_by_telegram_id)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(targetTeamUuid, event_date, description, empUuids, req.telegramId);
+    `INSERT INTO events (team_uuid, event_date, description, assigned_employee_uuids, created_by_telegram_id, series_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(targetTeamUuid, event_date, description, empUuids, req.telegramId, series_id || null);
 
   const created = db.prepare('SELECT * FROM events WHERE id = ?').get(Number(result.lastInsertRowid));
   res.status(201).json(created);
 });
 
 // DELETE /api/events/:id
+// Query params: ?mode=single (default) | ?mode=series (deletes this + future)
 app.delete('/api/events/:id', authMiddleware, (req, res) => {
   const event = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -385,8 +394,19 @@ app.delete('/api/events/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Only the event creator or an admin can delete this event' });
   }
 
-  db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
-  res.json({ deleted: true, id: Number(req.params.id) });
+  const mode = req.query.mode || 'single';
+
+  if (mode === 'series' && event.series_id) {
+    // Delete this event + all future events in the same series
+    const result = db.prepare(
+      `DELETE FROM events WHERE series_id = ? AND event_date >= ?`
+    ).run(event.series_id, event.event_date);
+    res.json({ deleted: true, mode: 'series', count: Number(result.changes) });
+  } else {
+    // Single event delete
+    db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
+    res.json({ deleted: true, id: Number(req.params.id) });
+  }
 });
 
 // POST /api/sync-hrm — admin only

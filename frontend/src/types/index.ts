@@ -22,6 +22,7 @@ export interface Event {
   assigned_employee_uuids: string
   created_by_telegram_id: string | null
   created_at: string
+  series_id: string | null
 }
 
 export interface UserInfo {
