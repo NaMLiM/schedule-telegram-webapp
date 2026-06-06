@@ -233,11 +233,13 @@ async function syncFromHrm() {
 
     db.exec('BEGIN');
     try {
+      // Clear FK-dependent tables first
+      db.prepare('DELETE FROM user_teams').run();
       db.prepare('DELETE FROM synced_employees').run();
-      db.prepare('DELETE FROM synced_teams').run();
 
-      const insertTeam = db.prepare(
-        'INSERT INTO synced_teams (uuid, name, team_type) VALUES (?, ?, ?)'
+      // Upsert teams instead of delete+re-insert — preserves event/user FK references
+      const upsertTeam = db.prepare(
+        'INSERT INTO synced_teams (uuid, name, team_type) VALUES (?, ?, ?) ON CONFLICT(uuid) DO UPDATE SET name = excluded.name, team_type = excluded.team_type'
       );
       const insertEmp = db.prepare(
         'INSERT INTO synced_employees (employee_uuid, team_id, name, employee_number, telegram_id, role) VALUES (?, ?, ?, ?, ?, ?)'
@@ -250,8 +252,9 @@ async function syncFromHrm() {
       const activeEmployeeUuids = new Set();
 
       for (const team of teams) {
-        const result = insertTeam.run(team.uuid, team.name, team.team_type || 'general');
-        const teamId = Number(result.lastInsertRowid);
+        upsertTeam.run(team.uuid, team.name, team.team_type || 'general');
+        const teamRow = db.prepare('SELECT id FROM synced_teams WHERE uuid = ?').get(team.uuid);
+        const teamId = teamRow.id;
         for (const m of team.members || []) {
           insertEmp.run(m.employee_uuid, teamId, m.name, m.employee_number || null, m.telegram_id || null, m.role || 'member');
           activeEmployeeUuids.add(m.employee_uuid);
